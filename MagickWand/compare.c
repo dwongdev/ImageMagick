@@ -1202,8 +1202,13 @@ WandExport MagickBooleanType CompareImagesCommand(ImageInfo *image_info,
           "ImagesTooDissimilar","`%s'",image->filename);
     }
   if (similarity_image == (Image *) NULL)
-    difference_image=CompareImages(image,reconstruct_image,metric,&distortion,
-      exception);
+    {
+      difference_image=CompareImages(image,reconstruct_image,metric,&distortion,
+        exception);
+      if ((metric == StructuralDissimilarityErrorMetric) ||
+          (metric == StructuralSimilarityErrorMetric))
+        distortion=1.0-distortion;
+    }
   else
     {
       Image
@@ -1300,6 +1305,7 @@ WandExport MagickBooleanType CompareImagesCommand(ImageInfo *image_info,
     case AbsoluteErrorMetric:
     {
       scale=(double) image->columns*image->rows;
+      similarity_metric=1.0-similarity_metric;
       break;
     }
     case DotProductCorrelationErrorMetric:
@@ -1343,6 +1349,12 @@ WandExport MagickBooleanType CompareImagesCommand(ImageInfo *image_info,
         {
           switch (metric)
           {
+            case AbsoluteErrorMetric:
+            {
+              (void) FormatLocaleFile(stderr,"%.*g (%.*g)",GetMagickPrecision(),
+                ceil(scale*distortion),GetMagickPrecision(),distortion);
+              break;
+            }
             case MeanErrorPerPixelErrorMetric:
             {
               (void) FormatLocaleFile(stderr,"%.*g (%.*g, %.*g)",
