@@ -979,7 +979,7 @@ static MagickBooleanType ClosePixelCacheOnDisk(CacheInfo *cache_info)
   status=(-1);
   if (cache_info->file != -1)
     {
-      status=close(cache_info->file);
+      status=close_utf8(cache_info->file);
       cache_info->file=(-1);
       RelinquishMagickResource(FileResource,1);
     }
@@ -3419,7 +3419,7 @@ static inline Quantum ApplyPixelCompositeMask(const Quantum p,
   if (fabs((double) (alpha-(double) TransparentAlpha)) < MagickEpsilon)
     return(q);
   gamma=1.0-QuantumScale*QuantumScale*alpha*beta;
-  gamma=PerceptibleReciprocal(gamma);
+  gamma=MagickSafeReciprocal(gamma);
   return(ClampToQuantum(gamma*MagickOver_((double) p,alpha,(double) q,beta)));
 }
 

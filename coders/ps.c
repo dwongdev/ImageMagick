@@ -78,6 +78,7 @@
 #include "MagickCore/token.h"
 #include "MagickCore/transform.h"
 #include "MagickCore/utility.h"
+#include "MagickCore/utility-private.h"
 #include "coders/bytebuffer-private.h"
 #include "coders/coders-private.h"
 #include "coders/ghostscript-private.h"
@@ -757,7 +758,7 @@ static Image *ReadPSImage(const ImageInfo *image_info,ExceptionInfo *exception)
         strlen(translate_geometry));
     }
   (void) count;
-  file=close(file)-1;
+  file=close_utf8(file)-1;
   /*
     Render Postscript with the Ghostscript delegate.
   */
@@ -1533,9 +1534,9 @@ static MagickBooleanType WritePSImage(const ImageInfo *image_info,Image *image,
     (void) ConcatenateMagickString(page_geometry,">",MagickPathExtent);
     (void) ParseMetaGeometry(page_geometry,&geometry.x,&geometry.y,
       &geometry.width,&geometry.height);
-    scale.x=PerceptibleReciprocal(resolution.x)*geometry.width*delta.x;
+    scale.x=MagickSafeReciprocal(resolution.x)*geometry.width*delta.x;
     geometry.width=CastDoubleToSizeT(scale.x+0.5);
-    scale.y=PerceptibleReciprocal(resolution.y)*geometry.height*delta.y;
+    scale.y=MagickSafeReciprocal(resolution.y)*geometry.height*delta.y;
     geometry.height=CastDoubleToSizeT(scale.y+0.5);
     (void) ParseAbsoluteGeometry(page_geometry,&media_info);
     (void) ParseGravityGeometry(image,page_geometry,&page_info,exception);
