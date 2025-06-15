@@ -310,7 +310,7 @@ static double ApplyEvaluateOperator(RandomInfo *random_info,const Quantum pixel,
     case InverseLogEvaluateOperator:
     {
       result=(double) QuantumRange*pow((value+1.0),QuantumScale*(double)
-        pixel-1.0)*PerceptibleReciprocal(value);
+        pixel-1.0)*MagickSafeReciprocal(value);
       break;
     }
     case LaplacianNoiseEvaluateOperator:
@@ -1028,7 +1028,7 @@ static Quantum ApplyFunction(Quantum pixel,const MagickFunction function,
       center=(number_parameters >= 2) ? parameters[1] : 0.5;
       range=(number_parameters >= 3) ? parameters[2] : 1.0;
       bias=(number_parameters >= 4) ? parameters[3] : 0.5;
-      result=2.0*PerceptibleReciprocal(width)*(QuantumScale*(double) pixel-
+      result=2.0*MagickSafeReciprocal(width)*(QuantumScale*(double) pixel-
         center);
       if (result <= -1.0)
         result=bias-range/2.0;
@@ -1450,20 +1450,20 @@ MagickExport ChannelMoments *GetImageMoments(const Image *image,
 
   double
     channels,
-    M00[2*MaxPixelChannels+1],
-    M01[2*MaxPixelChannels+1],
-    M02[2*MaxPixelChannels+1],
-    M03[2*MaxPixelChannels+1],
-    M10[2*MaxPixelChannels+1],
-    M11[2*MaxPixelChannels+1],
-    M12[2*MaxPixelChannels+1],
-    M20[2*MaxPixelChannels+1],
-    M21[2*MaxPixelChannels+1],
-    M22[2*MaxPixelChannels+1],
-    M30[2*MaxPixelChannels+1];
+    M00[2*MaxPixelChannels+1] = { 0.0 },
+    M01[2*MaxPixelChannels+1] = { 0.0 },
+    M02[2*MaxPixelChannels+1] = { 0.0 },
+    M03[2*MaxPixelChannels+1] = { 0.0 },
+    M10[2*MaxPixelChannels+1] = { 0.0 },
+    M11[2*MaxPixelChannels+1] = { 0.0 },
+    M12[2*MaxPixelChannels+1] = { 0.0 },
+    M20[2*MaxPixelChannels+1] = { 0.0 },
+    M21[2*MaxPixelChannels+1] = { 0.0 },
+    M22[2*MaxPixelChannels+1] = { 0.0 },
+    M30[2*MaxPixelChannels+1] = { 0.0 };
 
   PointInfo
-    centroid[2*MaxPixelChannels+1];
+    centroid[2*MaxPixelChannels+1] = { 0 };
 
   ssize_t
     c,
@@ -1479,18 +1479,6 @@ MagickExport ChannelMoments *GetImageMoments(const Image *image,
     return(channel_moments);
   (void) memset(channel_moments,0,(MaxPixelChannels+1)*
     sizeof(*channel_moments));
-  (void) memset(centroid,0,sizeof(centroid));
-  (void) memset(M00,0,sizeof(M00));
-  (void) memset(M01,0,sizeof(M01));
-  (void) memset(M02,0,sizeof(M02));
-  (void) memset(M03,0,sizeof(M03));
-  (void) memset(M10,0,sizeof(M10));
-  (void) memset(M11,0,sizeof(M11));
-  (void) memset(M12,0,sizeof(M12));
-  (void) memset(M20,0,sizeof(M20));
-  (void) memset(M21,0,sizeof(M21));
-  (void) memset(M22,0,sizeof(M22));
-  (void) memset(M30,0,sizeof(M30));
   image_view=AcquireVirtualCacheView(image,exception);
   for (y=0; y < (ssize_t) image->rows; y++)
   {
@@ -1513,16 +1501,20 @@ MagickExport ChannelMoments *GetImageMoments(const Image *image,
 
       for (i=0; i < (ssize_t) GetPixelChannels(image); i++)
       {
+        double
+          pixel;
+
         PixelChannel channel = GetPixelChannelChannel(image,i);
         PixelTrait traits = GetPixelChannelTraits(image,channel);
         if ((traits & UpdatePixelTrait) == 0)
           continue;
-        M00[channel]+=QuantumScale*(double) p[i];
-        M00[MaxPixelChannels]+=QuantumScale*(double) p[i];
-        M10[channel]+=x*QuantumScale*(double) p[i];
-        M10[MaxPixelChannels]+=x*QuantumScale*(double) p[i];
-        M01[channel]+=y*QuantumScale*(double) p[i];
-        M01[MaxPixelChannels]+=y*QuantumScale*(double) p[i];
+        pixel=QuantumScale*p[i];
+        M00[channel]+=pixel;
+        M00[CompositePixelChannel]+=pixel;
+        M10[channel]+=x*pixel;
+        M10[CompositePixelChannel]+=x*pixel;
+        M01[channel]+=y*pixel;
+        M01[CompositePixelChannel]+=y*pixel;
       }
       p+=(ptrdiff_t) GetPixelChannels(image);
     }
@@ -1532,8 +1524,8 @@ MagickExport ChannelMoments *GetImageMoments(const Image *image,
     /*
        Compute center of mass (centroid).
     */
-    centroid[c].x=M10[c]*PerceptibleReciprocal(M00[c]);
-    centroid[c].y=M01[c]*PerceptibleReciprocal(M00[c]);
+    centroid[c].x=M10[c]*MagickSafeReciprocal(M00[c]);
+    centroid[c].y=M01[c]*MagickSafeReciprocal(M00[c]);
   }
   for (y=0; y < (ssize_t) image->rows; y++)
   {
@@ -1562,68 +1554,72 @@ MagickExport ChannelMoments *GetImageMoments(const Image *image,
           continue;
         M11[channel]+=(x-centroid[channel].x)*(y-centroid[channel].y)*
           QuantumScale*(double) p[i];
-        M11[MaxPixelChannels]+=(x-centroid[channel].x)*(y-centroid[channel].y)*
-          QuantumScale*(double) p[i];
+        M11[CompositePixelChannel]+=(x-centroid[channel].x)*(y-
+          centroid[channel].y)*QuantumScale*(double) p[i];
         M20[channel]+=(x-centroid[channel].x)*(x-centroid[channel].x)*
           QuantumScale*(double) p[i];
-        M20[MaxPixelChannels]+=(x-centroid[channel].x)*(x-centroid[channel].x)*
-          QuantumScale*(double) p[i];
+        M20[CompositePixelChannel]+=(x-centroid[channel].x)*(x-
+          centroid[channel].x)*QuantumScale*(double) p[i];
         M02[channel]+=(y-centroid[channel].y)*(y-centroid[channel].y)*
           QuantumScale*(double) p[i];
-        M02[MaxPixelChannels]+=(y-centroid[channel].y)*(y-centroid[channel].y)*
-          QuantumScale*(double) p[i];
+        M02[CompositePixelChannel]+=(y-centroid[channel].y)*(y-
+          centroid[channel].y)*QuantumScale*(double) p[i];
         M21[channel]+=(x-centroid[channel].x)*(x-centroid[channel].x)*
           (y-centroid[channel].y)*QuantumScale*(double) p[i];
-        M21[MaxPixelChannels]+=(x-centroid[channel].x)*(x-centroid[channel].x)*
-          (y-centroid[channel].y)*QuantumScale*(double) p[i];
+        M21[CompositePixelChannel]+=(x-centroid[channel].x)*(x-
+          centroid[channel].x)*(y-centroid[channel].y)*QuantumScale*(double)
+          p[i];
         M12[channel]+=(x-centroid[channel].x)*(y-centroid[channel].y)*
           (y-centroid[channel].y)*QuantumScale*(double) p[i];
-        M12[MaxPixelChannels]+=(x-centroid[channel].x)*(y-centroid[channel].y)*
-          (y-centroid[channel].y)*QuantumScale*(double) p[i];
+        M12[CompositePixelChannel]+=(x-centroid[channel].x)*(y-
+          centroid[channel].y)*(y-centroid[channel].y)*QuantumScale*(double)
+          p[i];
         M22[channel]+=(x-centroid[channel].x)*(x-centroid[channel].x)*
           (y-centroid[channel].y)*(y-centroid[channel].y)*QuantumScale*(double)
           p[i];
-        M22[MaxPixelChannels]+=(x-centroid[channel].x)*(x-centroid[channel].x)*
-          (y-centroid[channel].y)*(y-centroid[channel].y)*QuantumScale*(double)
-          p[i];
+        M22[CompositePixelChannel]+=(x-centroid[channel].x)*(x-
+          centroid[channel].x)*(y-centroid[channel].y)*(y-centroid[channel].y)*
+          QuantumScale*(double) p[i];
         M30[channel]+=(x-centroid[channel].x)*(x-centroid[channel].x)*
           (x-centroid[channel].x)*QuantumScale*(double) p[i];
-        M30[MaxPixelChannels]+=(x-centroid[channel].x)*(x-centroid[channel].x)*
-          (x-centroid[channel].x)*QuantumScale*(double) p[i];
+        M30[CompositePixelChannel]+=(x-centroid[channel].x)*(x-
+          centroid[channel].x)*(x-centroid[channel].x)*QuantumScale*(double)
+          p[i];
         M03[channel]+=(y-centroid[channel].y)*(y-centroid[channel].y)*
           (y-centroid[channel].y)*QuantumScale*(double) p[i];
-        M03[MaxPixelChannels]+=(y-centroid[channel].y)*(y-centroid[channel].y)*
-          (y-centroid[channel].y)*QuantumScale*(double) p[i];
+        M03[CompositePixelChannel]+=(y-centroid[channel].y)*(y-
+          centroid[channel].y)*(y-centroid[channel].y)*QuantumScale*(double)
+          p[i];
       }
       p+=(ptrdiff_t) GetPixelChannels(image);
     }
   }
   channels=(double) GetImageChannels(image);
-  M00[MaxPixelChannels]/=channels;
-  M01[MaxPixelChannels]/=channels;
-  M02[MaxPixelChannels]/=channels;
-  M03[MaxPixelChannels]/=channels;
-  M10[MaxPixelChannels]/=channels;
-  M11[MaxPixelChannels]/=channels;
-  M12[MaxPixelChannels]/=channels;
-  M20[MaxPixelChannels]/=channels;
-  M21[MaxPixelChannels]/=channels;
-  M22[MaxPixelChannels]/=channels;
-  M30[MaxPixelChannels]/=channels;
+  M00[CompositePixelChannel]/=channels;
+  M01[CompositePixelChannel]/=channels;
+  M02[CompositePixelChannel]/=channels;
+  M03[CompositePixelChannel]/=channels;
+  M10[CompositePixelChannel]/=channels;
+  M11[CompositePixelChannel]/=channels;
+  M12[CompositePixelChannel]/=channels;
+  M20[CompositePixelChannel]/=channels;
+  M21[CompositePixelChannel]/=channels;
+  M22[CompositePixelChannel]/=channels;
+  M30[CompositePixelChannel]/=channels;
   for (c=0; c <= MaxPixelChannels; c++)
   {
     /*
       Compute elliptical angle, major and minor axes, eccentricity, & intensity.
     */
     channel_moments[c].centroid=centroid[c];
-    channel_moments[c].ellipse_axis.x=sqrt((2.0*PerceptibleReciprocal(M00[c]))*
+    channel_moments[c].ellipse_axis.x=sqrt((2.0*MagickSafeReciprocal(M00[c]))*
       ((M20[c]+M02[c])+sqrt(4.0*M11[c]*M11[c]+(M20[c]-M02[c])*
        (M20[c]-M02[c]))));
-    channel_moments[c].ellipse_axis.y=sqrt((2.0*PerceptibleReciprocal(M00[c]))*
+    channel_moments[c].ellipse_axis.y=sqrt((2.0*MagickSafeReciprocal(M00[c]))*
       ((M20[c]+M02[c])-sqrt(4.0*M11[c]*M11[c]+(M20[c]-M02[c])*
        (M20[c]-M02[c]))));
     channel_moments[c].ellipse_angle=RadiansToDegrees(1.0/2.0*atan(2.0*
-      M11[c]*PerceptibleReciprocal(M20[c]-M02[c])));
+      M11[c]*MagickSafeReciprocal(M20[c]-M02[c])));
     if (fabs(M11[c]) < 0.0)
       {
         if ((fabs(M20[c]-M02[c]) >= 0.0) && ((M20[c]-M02[c]) < 0.0))
@@ -1645,11 +1641,11 @@ MagickExport ChannelMoments *GetImageMoments(const Image *image,
           channel_moments[c].ellipse_angle+=90.0;
     channel_moments[c].ellipse_eccentricity=sqrt(1.0-(
       channel_moments[c].ellipse_axis.y*
-      channel_moments[c].ellipse_axis.y*PerceptibleReciprocal(
+      channel_moments[c].ellipse_axis.y*MagickSafeReciprocal(
       channel_moments[c].ellipse_axis.x*
       channel_moments[c].ellipse_axis.x)));
     channel_moments[c].ellipse_intensity=M00[c]*
-      PerceptibleReciprocal(MagickPI*channel_moments[c].ellipse_axis.x*
+      MagickSafeReciprocal(MagickPI*channel_moments[c].ellipse_axis.x*
       channel_moments[c].ellipse_axis.y+MagickEpsilon);
   }
   for (c=0; c <= MaxPixelChannels; c++)
@@ -1659,14 +1655,14 @@ MagickExport ChannelMoments *GetImageMoments(const Image *image,
     */
     M10[c]=0.0;
     M01[c]=0.0;
-    M11[c]*=PerceptibleReciprocal(pow(M00[c],1.0+(1.0+1.0)/2.0));
-    M20[c]*=PerceptibleReciprocal(pow(M00[c],1.0+(2.0+0.0)/2.0));
-    M02[c]*=PerceptibleReciprocal(pow(M00[c],1.0+(0.0+2.0)/2.0));
-    M21[c]*=PerceptibleReciprocal(pow(M00[c],1.0+(2.0+1.0)/2.0));
-    M12[c]*=PerceptibleReciprocal(pow(M00[c],1.0+(1.0+2.0)/2.0));
-    M22[c]*=PerceptibleReciprocal(pow(M00[c],1.0+(2.0+2.0)/2.0));
-    M30[c]*=PerceptibleReciprocal(pow(M00[c],1.0+(3.0+0.0)/2.0));
-    M03[c]*=PerceptibleReciprocal(pow(M00[c],1.0+(0.0+3.0)/2.0));
+    M11[c]*=MagickSafeReciprocal(pow(M00[c],1.0+(1.0+1.0)/2.0));
+    M20[c]*=MagickSafeReciprocal(pow(M00[c],1.0+(2.0+0.0)/2.0));
+    M02[c]*=MagickSafeReciprocal(pow(M00[c],1.0+(0.0+2.0)/2.0));
+    M21[c]*=MagickSafeReciprocal(pow(M00[c],1.0+(2.0+1.0)/2.0));
+    M12[c]*=MagickSafeReciprocal(pow(M00[c],1.0+(1.0+2.0)/2.0));
+    M22[c]*=MagickSafeReciprocal(pow(M00[c],1.0+(2.0+2.0)/2.0));
+    M30[c]*=MagickSafeReciprocal(pow(M00[c],1.0+(3.0+0.0)/2.0));
+    M03[c]*=MagickSafeReciprocal(pow(M00[c],1.0+(0.0+3.0)/2.0));
     M00[c]=1.0;
   }
   image_view=DestroyCacheView(image_view);
@@ -1680,15 +1676,15 @@ MagickExport ChannelMoments *GetImageMoments(const Image *image,
       M11[c];
     channel_moments[c].invariant[2]=(M30[c]-3.0*M12[c])*(M30[c]-3.0*M12[c])+
       (3.0*M21[c]-M03[c])*(3.0*M21[c]-M03[c]);
-    channel_moments[c].invariant[3]=(M30[c]+M12[c])*(M30[c]+M12[c])+
-      (M21[c]+M03[c])*(M21[c]+M03[c]);
+    channel_moments[c].invariant[3]=(M30[c]+M12[c])*(M30[c]+M12[c])+(M21[c]+
+      M03[c])*(M21[c]+M03[c]);
     channel_moments[c].invariant[4]=(M30[c]-3.0*M12[c])*(M30[c]+M12[c])*
       ((M30[c]+M12[c])*(M30[c]+M12[c])-3.0*(M21[c]+M03[c])*(M21[c]+M03[c]))+
       (3.0*M21[c]-M03[c])*(M21[c]+M03[c])*(3.0*(M30[c]+M12[c])*(M30[c]+M12[c])-
       (M21[c]+M03[c])*(M21[c]+M03[c]));
-    channel_moments[c].invariant[5]=(M20[c]-M02[c])*((M30[c]+M12[c])*
-      (M30[c]+M12[c])-(M21[c]+M03[c])*(M21[c]+M03[c]))+4.0*M11[c]*
-      (M30[c]+M12[c])*(M21[c]+M03[c]);
+    channel_moments[c].invariant[5]=(M20[c]-M02[c])*((M30[c]+M12[c])*(M30[c]+
+      M12[c])-(M21[c]+M03[c])*(M21[c]+M03[c]))+4.0*M11[c]*(M30[c]+M12[c])*
+      (M21[c]+M03[c]);
     channel_moments[c].invariant[6]=(3.0*M21[c]-M03[c])*(M30[c]+M12[c])*
       ((M30[c]+M12[c])*(M30[c]+M12[c])-3.0*(M21[c]+M03[c])*(M21[c]+M03[c]))-
       (M30[c]-3*M12[c])*(M21[c]+M03[c])*(3.0*(M30[c]+M12[c])*(M30[c]+M12[c])-
@@ -1798,7 +1794,7 @@ MagickExport ChannelPerceptualHash *GetImagePerceptualHash(const Image *image,
     for (channel=0; channel <= MaxPixelChannels; channel++)
       for (j=0; j < MaximumNumberOfImageMoments; j++)
         perceptual_hash[channel].phash[i][j]=
-          (-PerceptibleLog10(moments[channel].invariant[j]));
+          (-MagickSafeLog10(moments[channel].invariant[j]));
     moments=(ChannelMoments *) RelinquishMagickMemory(moments);
   }
   colorspaces=DestroyString(colorspaces);
@@ -2014,7 +2010,7 @@ static ssize_t GetMedianPixel(Quantum *pixels,const size_t n)
   }
 }
 
-static inline long double PerceptibleReciprocalLD(const long double x)
+static inline long double MagickSafeReciprocalLD(const long double x)
 {
   long double
     sign;
@@ -2035,11 +2031,11 @@ MagickExport ChannelStatistics *GetImageStatistics(const Image *image,
     *channel_statistics;
 
   double
+    channels,
     *histogram;
 
   long double
-    area,
-    channels;
+    area;
 
   MagickStatusType
     status;
@@ -2261,8 +2257,8 @@ MagickExport ChannelStatistics *GetImageStatistics(const Image *image,
     for (j=0; j <= (ssize_t) MaxMap; j++)
       if (histogram[(ssize_t) GetPixelChannels(image)*j+i] > 0.0)
         number_bins++;
-    area=PerceptibleReciprocalLD(channel_statistics[channel].area);
-    number_bins=PerceptibleReciprocalLD((long double) log2(number_bins));
+    area=MagickSafeReciprocalLD(channel_statistics[channel].area);
+    number_bins=(double) MagickSafeReciprocalLD((long double) log2(number_bins));
     for (j=0; j <= (ssize_t) MaxMap; j++)
     {
       double
@@ -2273,8 +2269,8 @@ MagickExport ChannelStatistics *GetImageStatistics(const Image *image,
       entropy=-count*log2(count)*number_bins;
       if (IsNaN(entropy) != 0)
         continue;
-      channel_statistics[channel].entropy+=(long double) entropy;
-      channel_statistics[CompositePixelChannel].entropy+=((long double) entropy/
+      channel_statistics[channel].entropy+=(double) entropy;
+      channel_statistics[CompositePixelChannel].entropy+=((double) entropy/
         GetPixelChannels(image));
     }
   }
@@ -3081,7 +3077,7 @@ MagickExport Image *StatisticImage(const Image *image,const StatisticType type,
           case ContrastStatistic:
           {
             pixel=ClampToQuantum(MagickAbsoluteValue((maximum-minimum)*
-              PerceptibleReciprocal(maximum+minimum)));
+              MagickSafeReciprocal(maximum+minimum)));
             break;
           }
           case GradientStatistic:
