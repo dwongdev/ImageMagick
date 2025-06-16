@@ -84,6 +84,7 @@
 #include "MagickCore/token.h"
 #include "MagickCore/transform.h"
 #include "MagickCore/utility.h"
+#include "MagickCore/utility-private.h"
 #include "MagickCore/xml-tree-private.h"
 #include "coders/bytebuffer-private.h"
 #include "coders/coders-private.h"
@@ -276,7 +277,7 @@ static void ReadPDFInfo(const ImageInfo *image_info,Image *image,
     if (CompareMagickByteBuffer(&buffer,PDFRotate,strlen(PDFRotate)) != MagickFalse)
       {
         p=GetMagickByteBufferDatum(&buffer);
-        (void) sscanf(p,PDFRotate" %lf",&pdf_info->angle);
+        (void) MagickSscanf(p,PDFRotate" %lf",&pdf_info->angle);
       }
     if (pdf_info->cmyk == MagickFalse)
       {
@@ -329,10 +330,10 @@ static void ReadPDFInfo(const ImageInfo *image_info,Image *image,
               Note region defined by crop box.
             */
             p=GetMagickByteBufferDatum(&buffer);
-            count=(ssize_t) sscanf(p,"CropBox [%lf %lf %lf %lf",&bounds.x1,
+            count=(ssize_t) MagickSscanf(p,"CropBox [%lf %lf %lf %lf",&bounds.x1,
               &bounds.y1,&bounds.x2,&bounds.y2);
             if (count != 4)
-              count=(ssize_t) sscanf(p,"CropBox[%lf %lf %lf %lf",&bounds.x1,
+              count=(ssize_t) MagickSscanf(p,"CropBox[%lf %lf %lf %lf",&bounds.x1,
                 &bounds.y1,&bounds.x2,&bounds.y2);
           }
       }
@@ -345,10 +346,10 @@ static void ReadPDFInfo(const ImageInfo *image_info,Image *image,
                 Note region defined by trim box.
               */
               p=GetMagickByteBufferDatum(&buffer);
-              count=(ssize_t) sscanf(p,"TrimBox [%lf %lf %lf %lf",&bounds.x1,
+              count=(ssize_t) MagickSscanf(p,"TrimBox [%lf %lf %lf %lf",&bounds.x1,
                 &bounds.y1,&bounds.x2,&bounds.y2);
               if (count != 4)
-                count=(ssize_t) sscanf(p,"TrimBox[%lf %lf %lf %lf",&bounds.x1,
+                count=(ssize_t) MagickSscanf(p,"TrimBox[%lf %lf %lf %lf",&bounds.x1,
                   &bounds.y1,&bounds.x2,&bounds.y2);
             }
         }
@@ -359,10 +360,10 @@ static void ReadPDFInfo(const ImageInfo *image_info,Image *image,
               Note region defined by media box.
             */
             p=GetMagickByteBufferDatum(&buffer);
-            count=(ssize_t) sscanf(p,"MediaBox [%lf %lf %lf %lf",&bounds.x1,
+            count=(ssize_t) MagickSscanf(p,"MediaBox [%lf %lf %lf %lf",&bounds.x1,
               &bounds.y1,&bounds.x2,&bounds.y2);
             if (count != 4)
-              count=(ssize_t) sscanf(p,"MediaBox[%lf %lf %lf %lf",&bounds.x1,
+              count=(ssize_t) MagickSscanf(p,"MediaBox[%lf %lf %lf %lf",&bounds.x1,
                 &bounds.y1,&bounds.x2,&bounds.y2);
           }
     if (count != 4)
@@ -562,14 +563,14 @@ static Image *ReadPDFImage(const ImageInfo *image_info,ExceptionInfo *exception)
     }
   if (write(file," ",1) != 1)
     {
-      file=close(file)-1;
+      file=close_utf8(file)-1;
       (void) RelinquishUniqueFileResource(input_filename);
       (void) RelinquishUniqueFileResource(postscript_filename);
       CleanupPDFInfo(&pdf_info);
       image=DestroyImage(image);
       return((Image *) NULL);
     }
-  file=close(file)-1;
+  file=close_utf8(file)-1;
   /*
     Render Postscript with the Ghostscript delegate.
   */
@@ -1919,13 +1920,13 @@ static MagickBooleanType WritePDFImage(const ImageInfo *image_info,Image *image,
     (void) WriteBlobString(image,buffer);
     (void) FormatLocaleString(buffer,MagickPathExtent,
       "/MediaBox [0 0 %g %g]\n",DefaultResolution*media_info.width*
-      (double) PerceptibleReciprocal(resolution.x),(double) (
-      DefaultResolution*media_info.height*PerceptibleReciprocal(resolution.y)));
+      (double) MagickSafeReciprocal(resolution.x),(double) (
+      DefaultResolution*media_info.height*MagickSafeReciprocal(resolution.y)));
     (void) WriteBlobString(image,buffer);
     (void) FormatLocaleString(buffer,MagickPathExtent,
       "/CropBox [0 0 %g %g]\n",DefaultResolution*media_info.width*(double)
-      PerceptibleReciprocal(resolution.x),(double) (DefaultResolution*
-      media_info.height*PerceptibleReciprocal(resolution.y)));
+      MagickSafeReciprocal(resolution.x),(double) (DefaultResolution*
+      media_info.height*MagickSafeReciprocal(resolution.y)));
     (void) WriteBlobString(image,buffer);
     (void) FormatLocaleString(buffer,MagickPathExtent,"/Contents %.20g 0 R\n",
       (double) object+1);
