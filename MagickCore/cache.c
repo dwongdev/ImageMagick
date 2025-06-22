@@ -657,15 +657,15 @@ static inline int GetCacheNumberThreads(const CacheInfo *source,
 {
   size_t
     max_threads = (size_t) GetMagickResourceLimit(ThreadResource),
-    number_threads = 1,
+    number_threads = 1UL,
     workload_factor = 64UL << factor;
   
   /*
     Determine number of threads based on workload.
   */
-  number_threads=(chunk <= workload_factor) ? 1 :
+  number_threads=(chunk <= workload_factor) ? 1UL :
     (chunk >= (workload_factor << 6)) ? max_threads :
-    1+(chunk-workload_factor)*(max_threads-1)/(((workload_factor << 6))-1);
+    1UL+(chunk-workload_factor)*(max_threads-1L)/(((workload_factor << 6))-1L);
   /*
     Limit threads for non-memory or non-map cache sources/destinations.
   */
@@ -979,7 +979,7 @@ static MagickBooleanType ClosePixelCacheOnDisk(CacheInfo *cache_info)
   status=(-1);
   if (cache_info->file != -1)
     {
-      status=close(cache_info->file);
+      status=close_utf8(cache_info->file);
       cache_info->file=(-1);
       RelinquishMagickResource(FileResource,1);
     }
@@ -3419,7 +3419,7 @@ static inline Quantum ApplyPixelCompositeMask(const Quantum p,
   if (fabs((double) (alpha-(double) TransparentAlpha)) < MagickEpsilon)
     return(q);
   gamma=1.0-QuantumScale*QuantumScale*alpha*beta;
-  gamma=PerceptibleReciprocal(gamma);
+  gamma=MagickSafeReciprocal(gamma);
   return(ClampToQuantum(gamma*MagickOver_((double) p,alpha,(double) q,beta)));
 }
 

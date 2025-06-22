@@ -91,6 +91,7 @@
 #include "MagickCore/splay-tree.h"
 #include "MagickCore/statistic.h"
 #include "MagickCore/string_.h"
+#include "MagickCore/string-private.h"
 #include "MagickCore/thread-private.h"
 #include "MagickCore/threshold.h"
 #include "MagickCore/timer-private.h"
@@ -106,6 +107,14 @@
 #define InitNumOprStack 50
 #define MinValStackSize 100
 #define InitNumUserSymbols 50
+
+#if defined(MAGICKCORE_WINDOWS_SUPPORT)
+#define __j0 _j0
+#define __j1 _j1
+#else
+#define __j0 j0
+#define __j1 j1
+#endif
 
 #define SECONDS_ERR -FLT_MAX
 
@@ -1556,7 +1565,7 @@ static MagickBooleanType ParseISO860(const char* text,struct tm* tp)
     sec;
 
   memset(tp,0,sizeof(struct tm));
-  if (sscanf(text,"%d-%d-%dT%d:%d:%d",&year,&month,&day,&hour,&min,&sec) != 6)
+  if (MagickSscanf(text,"%d-%d-%dT%d:%d:%d",&year,&month,&day,&hour,&min,&sec) != 6)
     return(MagickFalse);
   tp->tm_year=year-1900;
   tp->tm_mon=month-1;
@@ -3085,11 +3094,11 @@ static inline fxFltType ImageStat (
       /* Do nothing */
       break;
     case aPrintsizeX:
-      ret = (fxFltType) PerceptibleReciprocal (pfx->Images[ImgNum]->resolution.x)
+      ret = (fxFltType) MagickSafeReciprocal (pfx->Images[ImgNum]->resolution.x)
                         * pfx->Images[ImgNum]->columns;
       break;
     case aPrintsizeY:
-      ret = (fxFltType) PerceptibleReciprocal (pfx->Images[ImgNum]->resolution.y)
+      ret = (fxFltType) MagickSafeReciprocal (pfx->Images[ImgNum]->resolution.y)
                         * pfx->Images[ImgNum]->rows;
       break;
     case aQuality:
@@ -3489,7 +3498,7 @@ static MagickBooleanType ExecuteRPN (FxInfo * pfx, fxRtT * pfxrt, fxFltType *res
         case fAiry:
           if (regA==0) regA = 1.0;
           else {
-            fxFltType gamma = 2.0 * j1 ((MagickPI*regA)) / (MagickPI*regA);
+            fxFltType gamma = 2.0 * __j1((double) (MagickPI*regA)) / (MagickPI*regA);
             regA = gamma * gamma;
           }
           break;
@@ -3568,7 +3577,7 @@ static MagickBooleanType ExecuteRPN (FxInfo * pfx, fxRtT * pfxrt, fxFltType *res
           regA = exp((double) (-regA*regA/2.0))/sqrt(2.0*MagickPI);
           break;
         case fGcd:
-          if (!IsNaN(regA))
+          if (!IsNaN((double) regA))
             regA = FxGcd (regA, regB, 0);
           break;
         case fHypot:
@@ -3578,22 +3587,22 @@ static MagickBooleanType ExecuteRPN (FxInfo * pfx, fxRtT * pfxrt, fxFltType *res
           regA = floor ((double) regA);
           break;
         case fIsnan:
-          regA = (fxFltType) (!!IsNaN (regA));
+          regA = (fxFltType) (!!IsNaN ((double) regA));
           break;
 #if defined(MAGICKCORE_HAVE_J0)
         case fJ0:
-          regA = j0 ((double) regA);
+          regA = __j0((double) regA);
           break;
 #endif
 #if defined(MAGICKCORE_HAVE_J1)
         case fJ1:
-          regA = j1 ((double) regA);
+          regA = __j1((double) regA);
           break;
 #endif
 #if defined(MAGICKCORE_HAVE_J1)
         case fJinc:
           if (regA==0) regA = 1.0;
-          else regA = 2.0 * j1 ((MagickPI*regA))/(MagickPI*regA);
+          else regA = 2.0 * __j1((double) (MagickPI*regA))/(MagickPI*regA);
           break;
 #endif
         case fLn:
@@ -3606,7 +3615,7 @@ static MagickBooleanType ExecuteRPN (FxInfo * pfx, fxRtT * pfxrt, fxFltType *res
           regA = log10 ((double) regA);
           break;
         case fMagickTime:
-          regA = GetMagickTime ();
+          regA = (fxFltType) GetMagickTime();
           break;
         case fMax:
           regA = (regA > regB) ? regA : regB;
@@ -3967,10 +3976,10 @@ static MagickBooleanType ExecuteRPN (FxInfo * pfx, fxRtT * pfxrt, fxFltType *res
         case aPrintsize:
           break;
         case aPrintsizeX:
-          regA = (fxFltType) PerceptibleReciprocal (img->resolution.x) * img->columns;
+          regA = (fxFltType) MagickSafeReciprocal (img->resolution.x) * img->columns;
           break;
         case aPrintsizeY:
-          regA = (fxFltType) PerceptibleReciprocal (img->resolution.y) * img->rows;
+          regA = (fxFltType) MagickSafeReciprocal (img->resolution.y) * img->rows;
           break;
         case aQuality:
           regA = (fxFltType) img->quality;

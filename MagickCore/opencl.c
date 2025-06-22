@@ -208,7 +208,7 @@ static inline MagickBooleanType MagickCreateDirectory(const char *path)
     status;
 
 #ifdef MAGICKCORE_WINDOWS_SUPPORT
-  status=mkdir(path);
+  status=_mkdir(path);
 #else
   status=mkdir(path,0777);
 #endif
@@ -605,7 +605,7 @@ static MagickCLDevice AcquireMagickCLDevice()
 
 static MagickCLEnv AcquireMagickCLEnv(void)
 {
-  const char
+  char
     *option;
 
   MagickCLEnv
@@ -618,13 +618,14 @@ static MagickCLEnv AcquireMagickCLEnv(void)
     ActivateSemaphoreInfo(&clEnv->lock);
     clEnv->cpu_score=MAGICKCORE_OPENCL_UNDEFINED_SCORE;
     clEnv->enabled=MagickFalse;
-    option=getenv("MAGICK_OCL_DEVICE");
+    option=GetEnvironmentValue("MAGICK_OCL_DEVICE");
     if (option != (const char *) NULL)
       {
         if ((IsStringTrue(option) != MagickFalse) ||
             (strcmp(option,"GPU") == 0) ||
             (strcmp(option,"CPU") == 0))
           clEnv->enabled=MagickTrue;
+        option=DestroyString(option);
       }
   }
   return clEnv;
@@ -914,7 +915,7 @@ static MagickBooleanType CanWriteProfileToFile(const char *filename)
   FILE
     *profileFile;
 
-  profileFile=fopen(filename,"ab");
+  profileFile=fopen_utf8(filename,"ab");
 
   if (profileFile == (FILE *) NULL)
     {
@@ -966,7 +967,7 @@ static MagickBooleanType LoadOpenCLBenchmarks(MagickCLEnv clEnv)
 
 static void AutoSelectOpenCLDevices(MagickCLEnv clEnv)
 {
-  const char
+  char
     *option;
 
   double
@@ -978,13 +979,14 @@ static void AutoSelectOpenCLDevices(MagickCLEnv clEnv)
   size_t
     i;
 
-  option=getenv("MAGICK_OCL_DEVICE");
+  option=GetEnvironmentValue("MAGICK_OCL_DEVICE");
   if (option != (const char *) NULL)
     {
       if (strcmp(option,"GPU") == 0)
         SelectOpenCLDevice(clEnv,CL_DEVICE_TYPE_GPU);
       else if (strcmp(option,"CPU") == 0)
         SelectOpenCLDevice(clEnv,CL_DEVICE_TYPE_CPU);
+      option=DestroyString(option);
     }
 
   if (LoadOpenCLBenchmarks(clEnv) == MagickFalse)
@@ -1513,7 +1515,8 @@ MagickPrivate MagickCLCacheInfo CopyMagickCLCacheInfo(MagickCLCacheInfo info)
     {
       queue=AcquireOpenCLCommandQueue(info->device);
       pixels=(Quantum *) openCL_library->clEnqueueMapBuffer(queue,info->buffer,
-        CL_TRUE,CL_MAP_READ | CL_MAP_WRITE,0,info->length,event_count,events,
+        CL_TRUE,CL_MAP_READ | CL_MAP_WRITE,0,(size_t) info->length,event_count,
+        events,
         (cl_event *) NULL,(cl_int *) NULL);
       assert(pixels == info->pixels);
       ReleaseOpenCLCommandQueue(info->device,queue);
@@ -2780,10 +2783,10 @@ MagickPrivate MagickBooleanType RecordProfileData(MagickCLDevice device,
       device->profile_records[i+1]=(KernelProfileRecord) NULL;
     }
   if ((elapsed < profile_record->min) || (profile_record->count == 0))
-    profile_record->min=elapsed;
+    profile_record->min=(unsigned long) elapsed;
   if (elapsed > profile_record->max)
-    profile_record->max=elapsed;
-  profile_record->total+=elapsed;
+    profile_record->max=(unsigned long) elapsed;
+  profile_record->total+=(unsigned long) elapsed;
   profile_record->count+=1;
   UnlockSemaphoreInfo(device->lock);
   return(MagickTrue);
@@ -3023,7 +3026,7 @@ static MagickCLEnv RelinquishMagickCLEnv(MagickCLEnv clEnv)
       ssize_t
         i;
 
-      for (i=0; i < clEnv->number_contexts; i++)
+      for (i=0; i < (ssize_t) clEnv->number_contexts; i++)
         if (clEnv->contexts[i] != (cl_context) NULL)
           (void) openCL_library->clReleaseContext(clEnv->contexts[i]);
       clEnv->contexts=(cl_context *) RelinquishMagickMemory(clEnv->contexts);
