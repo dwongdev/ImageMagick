@@ -876,19 +876,19 @@ static Image *ReadBMPImage(const ImageInfo *image_info,ExceptionInfo *exception)
 
             gamma=bmp_info.red_primary.x+bmp_info.red_primary.y+
               bmp_info.red_primary.z;
-            gamma=PerceptibleReciprocal(gamma);
+            gamma=MagickSafeReciprocal(gamma);
             bmp_info.red_primary.x*=gamma;
             bmp_info.red_primary.y*=gamma;
 
             gamma=bmp_info.green_primary.x+bmp_info.green_primary.y+
               bmp_info.green_primary.z;
-            gamma=PerceptibleReciprocal(gamma);
+            gamma=MagickSafeReciprocal(gamma);
             bmp_info.green_primary.x*=gamma;
             bmp_info.green_primary.y*=gamma;
 
             gamma=bmp_info.blue_primary.x+bmp_info.blue_primary.y+
               bmp_info.blue_primary.z;
-            gamma=PerceptibleReciprocal(gamma);
+            gamma=MagickSafeReciprocal(gamma);
             bmp_info.blue_primary.x*=gamma;
             bmp_info.blue_primary.y*=gamma;
 
@@ -2450,7 +2450,7 @@ static MagickBooleanType WriteBMPImage(const ImageInfo *image_info,Image *image,
         profile_size=(MagickOffsetType) GetStringInfoLength(profile);
         if ((profile_size % 4) > 0)
           profile_size_pad=4-(profile_size%4);
-        bmp_info.file_size+=profile_size+profile_size_pad;
+        bmp_info.file_size+=(unsigned int) (profile_size+profile_size_pad);
       }
     (void) WriteBlob(image,2,(unsigned char *) "BM");
     (void) WriteBlobLSBLong(image,bmp_info.file_size);

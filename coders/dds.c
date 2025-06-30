@@ -1230,17 +1230,17 @@ static inline void VectorSubtract3(const DDSVector3 left,
 
 static inline void VectorTruncate(DDSVector4 *value)
 {
-  value->x = value->x > 0.0f ? floor(value->x) : ceil(value->x);
-  value->y = value->y > 0.0f ? floor(value->y) : ceil(value->y);
-  value->z = value->z > 0.0f ? floor(value->z) : ceil(value->z);
-  value->w = value->w > 0.0f ? floor(value->w) : ceil(value->w);
+  value->x = value->x > 0.0f ? floorf(value->x) : ceilf(value->x);
+  value->y = value->y > 0.0f ? floorf(value->y) : ceilf(value->y);
+  value->z = value->z > 0.0f ? floorf(value->z) : ceilf(value->z);
+  value->w = value->w > 0.0f ? floorf(value->w) : ceilf(value->w);
 }
 
 static inline void VectorTruncate3(DDSVector3 *value)
 {
-  value->x = value->x > 0.0f ? floor(value->x) : ceil(value->x);
-  value->y = value->y > 0.0f ? floor(value->y) : ceil(value->y);
-  value->z = value->z > 0.0f ? floor(value->z) : ceil(value->z);
+  value->x = value->x > 0.0f ? floorf(value->x) : ceilf(value->x);
+  value->y = value->y > 0.0f ? floorf(value->y) : ceilf(value->y);
+  value->z = value->z > 0.0f ? floorf(value->z) : ceilf(value->z);
 }
 
 static inline size_t ClampToLimit(const float value, const size_t limit)
@@ -2397,7 +2397,7 @@ static MagickBooleanType ReadUncompressedRGBPixels(Image *image,
     {
       if ((dds_info->pixelformat.rgb_bitcount == 8) ||
           (dds_info->extFormat == DXGI_FORMAT_R8_UNORM))
-        SetPixelGray(image,ScaleCharToQuantum(ReadBlobByte(image)),q);
+        SetPixelGray(image,ScaleCharToQuantum((unsigned char) ReadBlobByte(image)),q);
       else if ((dds_info->pixelformat.rgb_bitcount == 16) ||
                (dds_info->extFormat == DXGI_FORMAT_B5G6R5_UNORM))
         {
@@ -3323,7 +3323,7 @@ static void CompressClusterFit(const size_t count,
   {
 #if defined(MAGICKCORE_OPENMP_SUPPORT)
   #pragma omp parallel for schedule(dynamic,1) \
-    num_threads(GetMagickResourceLimit(ThreadResource))
+    num_threads((int) GetMagickResourceLimit(ThreadResource))
 #endif
     for (i=0; i < (ssize_t) count; i++)
     {
@@ -3685,7 +3685,7 @@ static void ComputePrincipleComponent(const float *covariance,
     w.z = (row2.z * v.z) + w.z;
     w.w = (row2.w * v.z) + w.w;
 
-    a = (float) PerceptibleReciprocal(MagickMax(w.x,MagickMax(w.y,w.z)));
+    a = (float) MagickSafeReciprocal(MagickMax(w.x,MagickMax(w.y,w.z)));
 
     v.x = w.x * a;
     v.y = w.y * a;
@@ -4035,7 +4035,7 @@ static void WriteFourCC(Image *image, const size_t compression,
       }
 
       for (i=0; i < (ssize_t) count; i++)
-        points[i].w = sqrt(points[i].w);
+        points[i].w=sqrtf(points[i].w);
 
       if (compression == FOURCC_DXT5)
         WriteAlphas(image,alphas,min5,max5,min7,max7);

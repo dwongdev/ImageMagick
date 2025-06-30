@@ -169,7 +169,7 @@ static inline float ScaleFloatPixel(const QuantumInfo *quantum_info,
     return(-FLT_MAX);
   if (pixel > (double) FLT_MAX)
     return(FLT_MAX);
-  return(pixel);
+  return((float) pixel);
 }
 
 static inline const unsigned char *PushQuantumFloatPixel(
@@ -5022,7 +5022,7 @@ MagickExport size_t ImportQuantumPixels(const Image *image,
           i;
 
         Sa=QuantumScale*(double) GetPixelAlpha(image,q);
-        gamma=PerceptibleReciprocal(Sa);
+        gamma=MagickSafeReciprocal(Sa);
         for (i=0; i < (ssize_t) GetPixelChannels(image); i++)
         {
           PixelChannel channel = GetPixelChannelChannel(image,i);

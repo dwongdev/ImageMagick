@@ -1663,7 +1663,6 @@ MagickExport size_t InterpretImageFilename(const ImageInfo *image_info,
     canonical;
 
   ssize_t
-    field_width,
     offset;
 
   canonical=MagickFalse;
@@ -1676,25 +1675,27 @@ MagickExport size_t InterpretImageFilename(const ImageInfo *image_info,
     q=(char *) p+1;
     if (*q == '%')
       {
-        p=q+1;
+        p++;
         continue;
       }
-    field_width=0;
-    if (*q == '0')
-      field_width=(ssize_t) strtol(q,&q,10);
     switch (*q)
     {
       case 'd':
       case 'o':
       case 'x':
       {
+        ssize_t
+          count;
+
         q++;
         c=(*q);
         *q='\0';
-        (void) FormatLocaleString(filename+(p-format-offset),(size_t)
+        count=FormatLocaleString(filename+(p-format-offset),(size_t)
           (MagickPathExtent-(p-format-offset)),p,value);
-        offset+=(4-field_width);
-        *q=c;
+        if ((count <= 0) || (count > (MagickPathExtent-(p-format-offset))))
+          return(0);
+        offset+=(ssize_t) ((q-p)-count);
+        *q=(char) c;
         (void) ConcatenateMagickString(filename,q,MagickPathExtent);
         canonical=MagickTrue;
         if (*(q-1) != '%')
@@ -1755,7 +1756,7 @@ MagickExport size_t InterpretImageFilename(const ImageInfo *image_info,
         (void) CopyMagickString(filename+(p-format-offset),option,(size_t)
           (MagickPathExtent-(p-format-offset)));
         offset+=(ssize_t) strlen(pattern)-(ssize_t) strlen(option)+3;
-        *q=c;
+        *q=(char) c;
         (void) ConcatenateMagickString(filename,r+1,MagickPathExtent);
         canonical=MagickTrue;
         if (*(q-1) != '%')

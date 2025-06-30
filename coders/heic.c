@@ -1464,6 +1464,34 @@ static MagickBooleanType WriteHEICImage(const ImageInfo *image_info,
     status=IsHEIFSuccess(image,&error,exception);
     if (status == MagickFalse)
       break;
+#if LIBHEIF_NUMERIC_VERSION >= HEIC_COMPUTE_NUMERIC_VERSION(1,17,0)
+    option=GetImageOption(image_info,"heic:cicp");
+    if (option != (char *) NULL)
+      {
+        GeometryInfo
+          cicp;
+
+        struct heif_color_profile_nclx
+          *nclx_profile;
+
+        SetGeometryInfo(&cicp);
+        nclx_profile=heif_nclx_color_profile_alloc();
+        cicp.rho=(double) nclx_profile->color_primaries;
+        cicp.sigma=(double) nclx_profile->transfer_characteristics;
+        cicp.xi=(double) nclx_profile->matrix_coefficients;
+        cicp.psi=(double) nclx_profile->full_range_flag;
+        (void) ParseGeometry(option,&cicp);
+        heif_nclx_color_profile_set_color_primaries(nclx_profile,
+          (uint16_t) cicp.rho);
+        heif_nclx_color_profile_set_transfer_characteristics(nclx_profile,
+          (uint16_t) cicp.sigma);
+        heif_nclx_color_profile_set_matrix_coefficients(nclx_profile,
+          (uint16_t) cicp.xi);
+        nclx_profile->full_range_flag=(uint16_t) cicp.psi; 
+        heif_image_set_nclx_color_profile(heif_image,nclx_profile);
+        heif_nclx_color_profile_free(nclx_profile);
+      }
+#endif
     profile=GetImageProfile(image,"icc");
     if (profile != (StringInfo *) NULL)
       (void) heif_image_set_raw_color_profile(heif_image,"prof",
