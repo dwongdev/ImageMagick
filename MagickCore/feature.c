@@ -94,6 +94,7 @@
 #include "MagickCore/thread-private.h"
 #include "MagickCore/timer.h"
 #include "MagickCore/utility.h"
+#include "MagickCore/utility-private.h"
 #include "MagickCore/version.h"
 
 /*
@@ -1045,7 +1046,7 @@ MagickExport ChannelFeatures *GetImageFeatures(const Image *image,
         break;
       }
     }
-    normalize=PerceptibleReciprocal(normalize);
+    normalize=MagickSafeReciprocal(normalize);
     for (y=0; y < (ssize_t) number_grays; y++)
     {
       ssize_t
@@ -2075,7 +2076,7 @@ MagickExport Image *HoughLineImage(const Image *image,const size_t width,
         }
     }
   }
-  (void) close(file);
+  (void) close_utf8(file);
   /*
     Render lines to image canvas.
   */
@@ -2293,7 +2294,7 @@ MagickExport Image *MeanShiftImage(const Image *image,const size_t width,
           }
         }
         if (count != 0)
-          gamma=PerceptibleReciprocal((double) count);
+          gamma=MagickSafeReciprocal((double) count);
         mean_location.x=gamma*sum_location.x;
         mean_location.y=gamma*sum_location.y;
         mean_pixel.red=gamma*sum_pixel.red;
