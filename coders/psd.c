@@ -1580,7 +1580,7 @@ static MagickBooleanType SetPSDMetaChannels(Image *image,const PSDInfo *psd_info
     number_meta_channels;
 
   if (image->storage_class == PseudoClass)
-    return(MagickFalse);
+    return(MagickTrue);
   number_meta_channels=(ssize_t) channels-psd_info->min_channels;
   if ((image->alpha_trait & BlendPixelTrait) != 0)
     number_meta_channels--;
